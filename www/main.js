@@ -8,30 +8,46 @@ let stats = {
 document.addEventListener('DOMContentLoaded', async function () {
 	console.log('🚀 Инициализация приложения...')
 
+	// Показываем сообщение о загрузке
+	showNotification('Инициализация приложения...', 'info')
+
 	try {
+		console.log('🔄 Начало инициализации Text Filter...')
+
 		// Инициализация фильтра текста
 		await initTextFilter(['мат', 'спам', 'оскорбление'])
 		console.log('✅ Text Filter ready')
 
-		// Инициализация модератора
-		await initModerator()
-		console.log('✅ Content Moderator ready')
+		// Обновляем статистику сразу после инициализации
+		updateStats()
+
+		// Инициализация модератора (пока пропускаем если есть ошибки)
+		try {
+			await initModerator()
+			console.log('✅ Content Moderator ready')
+		} catch (error) {
+			console.warn('⚠️ Content Moderator не инициализирован:', error)
+		}
 
 		// Загрузка сохраненных настроек
 		loadSettings()
-
-		// Обновление статистики
-		updateStats()
 
 		// Настройка обработчиков событий
 		setupEventListeners()
 
 		console.log('🎉 Приложение успешно инициализировано!')
+		showNotification('Приложение готово к работе!', 'success')
+
+		// Принудительно обновляем статистику
+		setTimeout(updateStats, 1000)
 	} catch (error) {
 		console.error('❌ Ошибка инициализации:', error)
 		showNotification('Ошибка инициализации: ' + error.message, 'error')
 	}
 })
+
+// Остальные функции остаются без изменений...
+// [копируйте все остальные функции из предыдущего main.js]
 
 function setupEventListeners() {
 	// Обработчик загрузки изображений
@@ -77,6 +93,7 @@ function setupEventListeners() {
 	}
 }
 
+// Функции для работы с текстом
 function checkText() {
 	try {
 		const text = document.getElementById('textInput').value.trim()
@@ -85,7 +102,7 @@ function checkText() {
 			return
 		}
 
-		const result = checkText(text)
+		const result = checkTextContent(text)
 		stats.textChecks++
 		updateStats()
 
@@ -115,7 +132,7 @@ function checkAndSend() {
 			return
 		}
 
-		validateMessage(text)
+		validateMessageContent(text)
 		stats.textChecks++
 		updateStats()
 
@@ -231,7 +248,7 @@ function loadBadWordsFromInput() {
 			.split(',')
 			.map(word => word.trim())
 			.filter(word => word)
-		loadBadWords(words)
+		loadBadWordsList(words)
 		updateWordList()
 		showNotification(`Загружено ${words.length} слов`, 'success')
 	} catch (error) {
@@ -256,7 +273,7 @@ function addDefaultWords() {
 			'fake',
 		]
 
-		loadBadWords(defaultWords)
+		loadBadWordsList(defaultWords)
 		const badWordsInput = document.getElementById('badWordsInput')
 		if (badWordsInput) badWordsInput.value = defaultWords.join(', ')
 		updateWordList()
@@ -269,12 +286,12 @@ function addDefaultWords() {
 	}
 }
 
-function clearAllBadWords() {
+function clearAllBadWordsList() {
 	try {
 		if (
 			confirm('Вы уверены, что хотите очистить весь список запрещенных слов?')
 		) {
-			clearBadWords()
+			clearAllBadWords()
 			const badWordsInput = document.getElementById('badWordsInput')
 			if (badWordsInput) badWordsInput.value = ''
 			updateWordList()
@@ -293,7 +310,7 @@ function addSingleWord() {
 			return
 		}
 
-		addBadWord(word)
+		addBadWordToFilter(word)
 		document.getElementById('singleWordInput').value = ''
 		updateWordList()
 		showNotification(`Слово "${word}" добавлено`, 'success')
@@ -305,8 +322,13 @@ function addSingleWord() {
 function updateWordList() {
 	try {
 		const count = getBadWordsCount()
+		console.log('Current bad words count:', count)
+
 		const wordsCount = document.getElementById('wordsCount')
-		if (wordsCount) wordsCount.textContent = count
+		if (wordsCount) {
+			wordsCount.textContent = count
+			console.log('Updated words count element')
+		}
 
 		const wordList = document.getElementById('currentWords')
 		if (wordList) {
@@ -381,6 +403,15 @@ function updateStats() {
 		const checksCount = document.getElementById('checksCount')
 		const imagesCount = document.getElementById('imagesCount')
 
+		console.log(
+			'Stats update - words:',
+			count,
+			'text checks:',
+			stats.textChecks,
+			'image checks:',
+			stats.imageChecks
+		)
+
 		if (wordsCount) wordsCount.textContent = count
 		if (checksCount) checksCount.textContent = stats.textChecks
 		if (imagesCount) imagesCount.textContent = stats.imageChecks
@@ -418,6 +449,82 @@ function saveSettings() {
 	showNotification('Настройки сохранены', 'success')
 }
 
+// Демо-функции
+function loadDemoScenario() {
+	const scenario = document.getElementById('demoScenario').value
+	const demoContent = document.getElementById('demoContent')
+	const demoText = document.getElementById('demoText')
+
+	if (!scenario) {
+		if (demoContent) demoContent.style.display = 'none'
+		return
+	}
+
+	if (demoContent) demoContent.style.display = 'block'
+
+	switch (scenario) {
+		case 'clean':
+			if (demoText)
+				demoText.value =
+					'Это совершенно нормальное сообщение без каких-либо проблем.'
+			break
+		case 'bad_words':
+			if (demoText) demoText.value = 'Это сообщение содержит мат и оскорбление.'
+			break
+		case 'similar':
+			if (demoText)
+				demoText.value = 'Проверим замену символов: м4т, 0скорбление.'
+			break
+	}
+}
+
+function runDemo() {
+	try {
+		const scenario = document.getElementById('demoScenario').value
+		const resultDiv = document.getElementById('demoResult')
+
+		if (!scenario) {
+			showResult('demoResult', 'Выберите сценарий для демонстрации', 'error')
+			return
+		}
+
+		if (resultDiv) {
+			resultDiv.style.display = 'block'
+			resultDiv.className = 'result info'
+			resultDiv.innerHTML = '⏳ Запуск демонстрации...'
+		}
+
+		let message = '<strong>Результаты демонстрации:</strong><br><br>'
+
+		const demoText = document.getElementById('demoText')
+		if (demoText) {
+			const text = demoText.value
+			const textResult = checkTextContent(text)
+			stats.textChecks++
+
+			message += `📝 <strong>Проверка текста:</strong> `
+			if (textResult.allowed) {
+				message += `✅ Разрешено<br>`
+			} else {
+				message += `❌ Заблокировано: ${textResult.reason}<br>`
+			}
+		}
+
+		if (resultDiv) {
+			resultDiv.innerHTML = message
+			resultDiv.className = 'result success'
+		}
+
+		updateStats()
+	} catch (error) {
+		const resultDiv = document.getElementById('demoResult')
+		if (resultDiv) {
+			resultDiv.className = 'result error'
+			resultDiv.innerHTML = `❌ Ошибка при выполнении демо: ${error.message}`
+		}
+	}
+}
+
 // Экспортируем функции для глобального использования
 window.checkText = checkText
 window.checkAndSend = checkAndSend
@@ -425,6 +532,8 @@ window.clearText = clearText
 window.switchTab = switchTab
 window.loadBadWords = loadBadWordsFromInput
 window.addDefaultWords = addDefaultWords
-window.clearBadWords = clearAllBadWords
+window.clearBadWords = clearAllBadWordsList
 window.addSingleWord = addSingleWord
 window.saveSettings = saveSettings
+window.loadDemoScenario = loadDemoScenario
+window.runDemo = runDemo

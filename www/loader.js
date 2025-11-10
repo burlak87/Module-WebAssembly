@@ -1,7 +1,17 @@
+// Глобальные переменные для WASM модулей
+let textFilterModule = null
+let contentModeratorModule = null
+
 // Функция загрузки WASM модуля
 function loadWasmModule(jsPath, wasmPath) {
 	return new Promise((resolve, reject) => {
-		// Создаем конфигурацию для модуля
+		console.log(`🔄 Загрузка ${jsPath}...`)
+
+		// Создаем новый script элемент
+		const script = document.createElement('script')
+		script.src = jsPath
+
+		// Создаем конфигурацию модуля ДО загрузки скрипта
 		const moduleConfig = {
 			locateFile: function (path) {
 				if (path.endsWith('.wasm')) {
@@ -10,24 +20,28 @@ function loadWasmModule(jsPath, wasmPath) {
 				return path
 			},
 			onRuntimeInitialized: function () {
+				console.log(`✅ ${jsPath} initialized`)
 				resolve(this)
+			},
+			onAbort: function (reason) {
+				console.error(`❌ ${jsPath} aborted:`, reason)
+				reject(new Error(`WASM module aborted: ${reason}`))
 			},
 		}
 
-		// Временно сохраняем конфигурацию
+		// Устанавливаем глобальную конфигурацию
 		window.Module = moduleConfig
 
-		// Загружаем скрипт
-		const script = document.createElement('script')
-		script.src = jsPath
 		script.onload = function () {
-			// Модуль должен автоматически инициализироваться
-			console.log(`✅ ${jsPath} loaded`)
+			console.log(`✅ ${jsPath} script loaded`)
+			// Модуль должен инициализироваться автоматически через onRuntimeInitialized
 		}
+
 		script.onerror = function (err) {
 			console.error(`❌ Failed to load ${jsPath}:`, err)
-			reject(err)
+			reject(new Error(`Failed to load ${jsPath}`))
 		}
+
 		document.head.appendChild(script)
 	})
 }
