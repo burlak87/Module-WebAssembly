@@ -3,7 +3,9 @@
 
 #include <cstdint>
 
+#ifdef __cplusplus
 extern "C" {
+#endif
 
 // Инициализация модуля модерации
 void init_moderator();
@@ -19,22 +21,8 @@ int analyze_image_with_sensitivity(const uint8_t* image_data, int width, int hei
 // Освобождение ресурсов
 void cleanup_moderator();
 
-// Вспомогательная функция для вычисления яркости области
-float get_region_brightness(const uint8_t* image_data, int width, int height, 
-                           int start_x, int start_y, int region_width, int region_height);
-
-// Вспомогательная функция для анализа цветового распределения
-void analyze_color_distribution(const uint8_t* image_data, int width, int height, 
-                               float* skin_tone_ratio, float* saturated_ratio);
-
+#ifdef __cplusplus
 }
-
-// Структура для хранения результатов анализа
-struct AnalysisResult {
-    float skin_tone_ratio;
-    float saturation_level;
-    float brightness_variance;
-    int nsfw_probability;
-};
+#endif
 
 #endif

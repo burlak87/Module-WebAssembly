@@ -3,7 +3,9 @@
 
 #include <cstdint>
 
+#ifdef __cplusplus
 extern "C" {
+#endif
 
 // Инициализация фильтра с базовым списком запрещенных слов
 void init_text_filter();
@@ -36,6 +38,8 @@ int get_bad_words_count();
 // Освобождение ресурсов
 void cleanup_text_filter();
 
+#ifdef __cplusplus
 }
+#endif
 
 #endif

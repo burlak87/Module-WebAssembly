@@ -7,7 +7,7 @@ mkdir -p build
 mkdir -p www
 
 echo "🔤 Компиляция Text Filter..."
-emcc src/text_filter.cpp src/text_filter_bindings.cpp \
+emcc src/text_filter.cpp \
   -I src/ \
   -O2 \
   -s WASM=1 \

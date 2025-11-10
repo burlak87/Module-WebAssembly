@@ -17,13 +17,13 @@ document.addEventListener('DOMContentLoaded', async function () {
 
 		// Инициализация фильтра текста
 		textFilter = new TextFilterModule.default()
-		await textFilter.init()
-		console.log('✅ Text Filter initialized')
+		await textFilter.init(['мат', 'спам', 'оскорбление'])
+		console.log('✅ Text Filter ready')
 
 		// Инициализация модератора
 		moderator = new ContentModeratorModule.default()
 		await moderator.init()
-		console.log('✅ Content Moderator initialized')
+		console.log('✅ Content Moderator ready')
 
 		// Загрузка сохраненных настроек
 		loadSettings()
@@ -37,52 +37,61 @@ document.addEventListener('DOMContentLoaded', async function () {
 		console.log('🎉 Приложение успешно инициализировано!')
 	} catch (error) {
 		console.error('❌ Ошибка инициализации:', error)
-		showNotification('Ошибка инициализации приложения', 'error')
+		showNotification('Ошибка инициализации: ' + error.message, 'error')
 	}
 })
 
 function setupEventListeners() {
 	// Обработчик загрузки изображений
-	document
-		.getElementById('imageInput')
-		.addEventListener('change', function (e) {
+	const imageInput = document.getElementById('imageInput')
+	if (imageInput) {
+		imageInput.addEventListener('change', function (e) {
 			handleImageUpload(e.target.files[0])
 		})
+	}
 
 	// Обработчик перетаскивания изображений
 	const uploadArea = document.querySelector('.upload-area')
-	uploadArea.addEventListener('dragover', function (e) {
-		e.preventDefault()
-		uploadArea.style.borderColor = 'var(--primary)'
-		uploadArea.style.background = '#f0f8ff'
-	})
+	if (uploadArea) {
+		uploadArea.addEventListener('dragover', function (e) {
+			e.preventDefault()
+			uploadArea.style.borderColor = 'var(--primary)'
+			uploadArea.style.background = '#f0f8ff'
+		})
 
-	uploadArea.addEventListener('dragleave', function () {
-		uploadArea.style.borderColor = '#ccc'
-		uploadArea.style.background = ''
-	})
+		uploadArea.addEventListener('dragleave', function () {
+			uploadArea.style.borderColor = '#ccc'
+			uploadArea.style.background = ''
+		})
 
-	uploadArea.addEventListener('drop', function (e) {
-		e.preventDefault()
-		uploadArea.style.borderColor = '#ccc'
-		uploadArea.style.background = ''
-		const file = e.dataTransfer.files[0]
-		if (file && file.type.startsWith('image/')) {
-			handleImageUpload(file)
-		}
-	})
+		uploadArea.addEventListener('drop', function (e) {
+			e.preventDefault()
+			uploadArea.style.borderColor = '#ccc'
+			uploadArea.style.background = ''
+			const file = e.dataTransfer.files[0]
+			if (file && file.type.startsWith('image/')) {
+				handleImageUpload(file)
+			}
+		})
+	}
 
 	// Обработчик чувствительности
-	document
-		.getElementById('sensitivity')
-		.addEventListener('input', function (e) {
+	const sensitivity = document.getElementById('sensitivity')
+	if (sensitivity) {
+		sensitivity.addEventListener('input', function (e) {
 			document.getElementById('sensitivityValue').textContent =
 				e.target.value + '%'
 		})
+	}
 }
 
 // Функции для работы с текстом
 function checkText() {
+	if (!textFilter) {
+		showNotification('Фильтр текста не инициализирован', 'error')
+		return
+	}
+
 	const text = document.getElementById('textInput').value.trim()
 	if (!text) {
 		showResult('textResult', 'Введите текст для проверки', 'error')
@@ -113,6 +122,11 @@ function checkText() {
 }
 
 function checkAndSend() {
+	if (!textFilter) {
+		showNotification('Фильтр текста не инициализирован', 'error')
+		return
+	}
+
 	const text = document.getElementById('textInput').value.trim()
 	if (!text) {
 		showResult('textResult', 'Введите текст для отправки', 'error')
@@ -141,36 +155,47 @@ function checkAndSend() {
 
 function clearText() {
 	document.getElementById('textInput').value = ''
-	document.getElementById('textResult').style.display = 'none'
+	const resultDiv = document.getElementById('textResult')
+	if (resultDiv) resultDiv.style.display = 'none'
 }
 
 // Функции для работы с изображениями
 async function handleImageUpload(file) {
 	if (!file) return
+	if (!moderator) {
+		showNotification('Модератор изображений не инициализирован', 'error')
+		return
+	}
 
 	const preview = document.getElementById('imagePreview')
 	const resultDiv = document.getElementById('imageResult')
 
 	// Показываем превью
 	const url = URL.createObjectURL(file)
-	preview.src = url
-	preview.style.display = 'block'
+	if (preview) {
+		preview.src = url
+		preview.style.display = 'block'
+	}
 
-	resultDiv.style.display = 'block'
-	resultDiv.className = 'result info'
-	resultDiv.innerHTML = '⏳ Анализируем изображение...'
+	if (resultDiv) {
+		resultDiv.style.display = 'block'
+		resultDiv.className = 'result info'
+		resultDiv.innerHTML = '⏳ Анализируем изображение...'
+	}
 
 	try {
-		const sensitivity = parseInt(document.getElementById('sensitivity').value)
+		const sensitivity = document.getElementById('sensitivity')
+			? parseInt(document.getElementById('sensitivity').value)
+			: 50
 		const probability = await moderator.analyzeImageFile(file, sensitivity)
 
 		stats.imageChecks++
 		updateStats()
 
 		const riskLevel = moderator.getRiskLevel(probability)
-		const threshold = parseInt(
-			document.getElementById('autoBlockThreshold').value
-		)
+		const threshold = document.getElementById('autoBlockThreshold')
+			? parseInt(document.getElementById('autoBlockThreshold').value)
+			: 50
 
 		let riskClass, riskText
 		switch (riskLevel) {
@@ -201,30 +226,43 @@ async function handleImageUpload(file) {
 
 		if (probability >= threshold) {
 			message += `<br><br>🚫 <strong>Изображение заблокировано</strong> (порог: ${threshold}%)`
-			resultDiv.className = 'result error'
+			if (resultDiv) resultDiv.className = 'result error'
 		} else {
 			message += `<br><br>✅ <strong>Изображение разрешено</strong>`
-			resultDiv.className = 'result success'
+			if (resultDiv) resultDiv.className = 'result success'
 		}
 
-		resultDiv.innerHTML = message
+		if (resultDiv) resultDiv.innerHTML = message
 
 		// Показываем статистику
-		document.getElementById('nsfwScore').textContent = probability + '%'
-		document.getElementById('skinTone').textContent =
-			'~' + Math.round(probability * 0.6) + '%'
-		document.getElementById('saturation').textContent =
-			'~' + Math.round(probability * 0.4) + '%'
-		document.getElementById('imageStats').style.display = 'grid'
+		const nsfwScore = document.getElementById('nsfwScore')
+		const skinTone = document.getElementById('skinTone')
+		const saturation = document.getElementById('saturation')
+		const imageStats = document.getElementById('imageStats')
+
+		if (nsfwScore) nsfwScore.textContent = probability + '%'
+		if (skinTone)
+			skinTone.textContent = '~' + Math.round(probability * 0.6) + '%'
+		if (saturation)
+			saturation.textContent = '~' + Math.round(probability * 0.4) + '%'
+		if (imageStats) imageStats.style.display = 'grid'
 	} catch (error) {
 		console.error('Image analysis error:', error)
-		resultDiv.className = 'result error'
-		resultDiv.innerHTML = '❌ Ошибка при анализе изображения'
+		if (resultDiv) {
+			resultDiv.className = 'result error'
+			resultDiv.innerHTML =
+				'❌ Ошибка при анализе изображения: ' + error.message
+		}
 	}
 }
 
 // Функции админки
 function loadBadWords() {
+	if (!textFilter) {
+		showNotification('Фильтр текста не инициализирован', 'error')
+		return
+	}
+
 	const wordsText = document.getElementById('badWordsInput').value.trim()
 	if (!wordsText) {
 		showNotification('Введите слова для загрузки', 'error')
@@ -245,6 +283,11 @@ function loadBadWords() {
 }
 
 function addDefaultWords() {
+	if (!textFilter) {
+		showNotification('Фильтр текста не инициализирован', 'error')
+		return
+	}
+
 	const defaultWords = [
 		'мат',
 		'ругательство',
@@ -269,7 +312,8 @@ function addDefaultWords() {
 	]
 
 	textFilter.loadBadWords(defaultWords)
-	document.getElementById('badWordsInput').value = defaultWords.join(', ')
+	const badWordsInput = document.getElementById('badWordsInput')
+	if (badWordsInput) badWordsInput.value = defaultWords.join(', ')
 	updateWordList()
 	showNotification(
 		`Добавлено ${defaultWords.length} стандартных слов`,
@@ -278,17 +322,28 @@ function addDefaultWords() {
 }
 
 function clearBadWords() {
+	if (!textFilter) {
+		showNotification('Фильтр текста не инициализирован', 'error')
+		return
+	}
+
 	if (
 		confirm('Вы уверены, что хотите очистить весь список запрещенных слов?')
 	) {
 		textFilter.clearBadWords()
-		document.getElementById('badWordsInput').value = ''
+		const badWordsInput = document.getElementById('badWordsInput')
+		if (badWordsInput) badWordsInput.value = ''
 		updateWordList()
 		showNotification('Список запрещенных слов очищен', 'success')
 	}
 }
 
 function addSingleWord() {
+	if (!textFilter) {
+		showNotification('Фильтр текста не инициализирован', 'error')
+		return
+	}
+
 	const word = document.getElementById('singleWordInput').value.trim()
 	if (!word) {
 		showNotification('Введите слово', 'error')
@@ -306,12 +361,16 @@ function addSingleWord() {
 }
 
 function updateWordList() {
-	const count = textFilter.getBadWordsCount()
-	document.getElementById('wordsCount').textContent = count
+	if (!textFilter) return
 
-	// В реальном приложении здесь можно отображать список слов
+	const count = textFilter.getBadWordsCount()
+	const wordsCount = document.getElementById('wordsCount')
+	if (wordsCount) wordsCount.textContent = count
+
 	const wordList = document.getElementById('currentWords')
-	wordList.innerHTML = `<strong>Загружено ${count} запрещенных слов</strong>`
+	if (wordList) {
+		wordList.innerHTML = `<strong>Загружено ${count} запрещенных слов</strong>`
+	}
 
 	updateStats()
 }
@@ -327,15 +386,20 @@ function switchTab(tabName) {
 	})
 
 	// Показать выбранную вкладку
-	document.getElementById(tabName).classList.add('active')
+	const targetTab = document.getElementById(tabName)
+	if (targetTab) targetTab.classList.add('active')
+
+	// Активировать кнопку
 	event.target.classList.add('active')
 }
 
 function showResult(elementId, message, type) {
 	const element = document.getElementById(elementId)
-	element.innerHTML = message
-	element.className = `result ${type}`
-	element.style.display = 'block'
+	if (element) {
+		element.innerHTML = message
+		element.className = `result ${type}`
+		element.style.display = 'block'
+	}
 }
 
 function showNotification(message, type) {
@@ -370,31 +434,40 @@ function showNotification(message, type) {
 }
 
 function updateStats() {
-	document.getElementById('wordsCount').textContent =
-		textFilter.getBadWordsCount()
-	document.getElementById('checksCount').textContent = stats.textChecks
-	document.getElementById('imagesCount').textContent = stats.imageChecks
+	if (!textFilter) return
+
+	const wordsCount = document.getElementById('wordsCount')
+	const checksCount = document.getElementById('checksCount')
+	const imagesCount = document.getElementById('imagesCount')
+
+	if (wordsCount) wordsCount.textContent = textFilter.getBadWordsCount()
+	if (checksCount) checksCount.textContent = stats.textChecks
+	if (imagesCount) imagesCount.textContent = stats.imageChecks
 }
 
 function loadSettings() {
 	const settings = JSON.parse(localStorage.getItem('filterSettings') || '{}')
-	if (settings.sensitivity) {
-		document.getElementById('sensitivity').value = settings.sensitivity
-		document.getElementById('sensitivityValue').textContent =
-			settings.sensitivity + '%'
+	const sensitivity = document.getElementById('sensitivity')
+	const sensitivityValue = document.getElementById('sensitivityValue')
+	const autoBlockThreshold = document.getElementById('autoBlockThreshold')
+
+	if (settings.sensitivity && sensitivity && sensitivityValue) {
+		sensitivity.value = settings.sensitivity
+		sensitivityValue.textContent = settings.sensitivity + '%'
 	}
-	if (settings.autoBlockThreshold) {
-		document.getElementById('autoBlockThreshold').value =
-			settings.autoBlockThreshold
+	if (settings.autoBlockThreshold && autoBlockThreshold) {
+		autoBlockThreshold.value = settings.autoBlockThreshold
 	}
 }
 
 function saveSettings() {
 	const settings = {
-		sensitivity: parseInt(document.getElementById('sensitivity').value),
-		autoBlockThreshold: parseInt(
-			document.getElementById('autoBlockThreshold').value
-		),
+		sensitivity: document.getElementById('sensitivity')
+			? parseInt(document.getElementById('sensitivity').value)
+			: 50,
+		autoBlockThreshold: document.getElementById('autoBlockThreshold')
+			? parseInt(document.getElementById('autoBlockThreshold').value)
+			: 50,
 	}
 
 	localStorage.setItem('filterSettings', JSON.stringify(settings))
@@ -409,36 +482,44 @@ function loadDemoScenario() {
 	const demoImageContainer = document.getElementById('demoImageContainer')
 
 	if (!scenario) {
-		demoContent.style.display = 'none'
+		if (demoContent) demoContent.style.display = 'none'
 		return
 	}
 
-	demoContent.style.display = 'block'
-	demoImageContainer.style.display = 'none'
+	if (demoContent) demoContent.style.display = 'block'
+	if (demoImageContainer) demoImageContainer.style.display = 'none'
 
 	switch (scenario) {
 		case 'clean':
-			demoText.value =
-				'Это совершенно нормальное сообщение без каких-либо проблем. Оно содержит только допустимый контент для всех возрастов.'
+			if (demoText)
+				demoText.value =
+					'Это совершенно нормальное сообщение без каких-либо проблем. Оно содержит только допустимый контент для всех возрастов.'
 			break
 		case 'bad_words':
-			demoText.value =
-				'Это сообщение содержит мат и оскорбление. Также здесь есть спам и мошенничество.'
+			if (demoText)
+				demoText.value =
+					'Это сообщение содержит мат и оскорбление. Также здесь есть спам и мошенничество.'
 			break
 		case 'similar':
-			demoText.value =
-				'Проверим замену символов: м4т, 0скорбление, сп4м. Также тест на ненависть.'
+			if (demoText)
+				demoText.value =
+					'Проверим замену символов: м4т, 0скорбление, сп4м. Также тест на ненависть.'
 			break
 		case 'nsfw':
-			demoText.value =
-				'Проверка текста вместе с изображением. Этот текст сам по себе безопасен.'
-			demoImageContainer.style.display = 'block'
-			// Здесь можно добавить демо-изображение
+			if (demoText)
+				demoText.value =
+					'Проверка текста вместе с изображением. Этот текст сам по себе безопасен.'
+			if (demoImageContainer) demoImageContainer.style.display = 'block'
 			break
 	}
 }
 
 function runDemo() {
+	if (!textFilter) {
+		showNotification('Фильтр текста не инициализирован', 'error')
+		return
+	}
+
 	const scenario = document.getElementById('demoScenario').value
 	const resultDiv = document.getElementById('demoResult')
 
@@ -447,45 +528,54 @@ function runDemo() {
 		return
 	}
 
-	resultDiv.style.display = 'block'
-	resultDiv.className = 'result info'
-	resultDiv.innerHTML = '⏳ Запуск демонстрации...'
+	if (resultDiv) {
+		resultDiv.style.display = 'block'
+		resultDiv.className = 'result info'
+		resultDiv.innerHTML = '⏳ Запуск демонстрации...'
+	}
 
 	try {
 		let message = '<strong>Результаты демонстрации:</strong><br><br>'
 
 		// Проверка текста
-		const text = document.getElementById('demoText').value
-		const textResult = textFilter.checkText(text)
-		stats.textChecks++
+		const demoText = document.getElementById('demoText')
+		if (demoText) {
+			const text = demoText.value
+			const textResult = textFilter.checkText(text)
+			stats.textChecks++
 
-		message += `📝 <strong>Проверка текста:</strong> `
-		if (textResult.allowed) {
-			message += `✅ Разрешено<br>`
-		} else {
-			message += `❌ Заблокировано: ${textResult.reason}<br>`
+			message += `📝 <strong>Проверка текста:</strong> `
+			if (textResult.allowed) {
+				message += `✅ Разрешено<br>`
+			} else {
+				message += `❌ Заблокировано: ${textResult.reason}<br>`
+			}
 		}
 
 		// Проверка изображения если есть
 		if (scenario === 'nsfw') {
 			message += `<br>🖼️ <strong>Проверка изображения:</strong> `
-			// Здесь можно добавить анализ демо-изображения
 			message += `🔍 Функция анализа изображения активирована<br>`
 		}
 
-		message += `<br>🎯 <strong>Сценарий:</strong> ${
-			document.getElementById('demoScenario').options[
-				document.getElementById('demoScenario').selectedIndex
-			].text
-		}`
+		const demoScenario = document.getElementById('demoScenario')
+		if (demoScenario) {
+			message += `<br>🎯 <strong>Сценарий:</strong> ${
+				demoScenario.options[demoScenario.selectedIndex].text
+			}`
+		}
 
-		resultDiv.innerHTML = message
-		resultDiv.className = 'result success'
+		if (resultDiv) {
+			resultDiv.innerHTML = message
+			resultDiv.className = 'result success'
+		}
 
 		updateStats()
 	} catch (error) {
-		resultDiv.className = 'result error'
-		resultDiv.innerHTML = `❌ Ошибка при выполнении демо: ${error.message}`
+		if (resultDiv) {
+			resultDiv.className = 'result error'
+			resultDiv.innerHTML = `❌ Ошибка при выполнении демо: ${error.message}`
+		}
 	}
 }
 
