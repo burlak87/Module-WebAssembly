@@ -1,3 +1,6 @@
 /src/text_filter.cpp
 /www/loader.js
 /www/main.js
+/build/*
+/test/*
+recompile.s
