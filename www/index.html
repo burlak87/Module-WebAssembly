@@ -1,179 +1,235 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Универсальный фильтр контента</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🛡️ Универсальный фильтр контента</h1>
-            <p>Фильтрация текста и изображений с помощью WebAssembly</p>
-        </div>
-
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('admin')">⚙️ Админка</button>
-            <button class="tab" onclick="switchTab('text')">🔤 Фильтр текста</button>
-            <button class="tab" onclick="switchTab('image')">🖼️ Фильтр изображений</button>
-            <button class="tab" onclick="switchTab('demo')">🎯 Демо</button>
-        </div>
-
-        <!-- Админка -->
-        <div id="admin" class="tab-content active">
-            <div class="card">
-                <h2>⚙️ Управление фильтрами</h2>
-                <p>Настройте списки запрещенных слов и параметры фильтрации</p>
-
-                <div class="form-group">
-                    <label>Запрещенные слова (через запятую):</label>
-                    <textarea id="badWordsInput" placeholder="мат, спам, мошенничество, оскорбление..."></textarea>
-                </div>
-
-                <button class="btn btn-primary" onclick="loadBadWords()">💾 Загрузить слова</button>
-                <button class="btn btn-success" onclick="addDefaultWords()">📥 Добавить стандартные слова</button>
-                <button class="btn btn-danger" onclick="clearBadWords()">🗑️ Очистить список</button>
-
-                <div class="form-group">
-                    <label>Добавить отдельное слово:</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="singleWordInput" placeholder="Введите слово...">
-                        <button class="btn btn-primary" onclick="addSingleWord()">➕ Добавить</button>
-                    </div>
-                </div>
-
-                <div class="word-list" id="currentWords">
-                    <em>Загрузка списка слов...</em>
-                </div>
-
-                <div class="stats">
-                    <div class="stat-card">
-                        <div class="stat-number" id="wordsCount">0</div>
-                        <div>Запрещенных слов</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="checksCount">0</div>
-                        <div>Проверок текста</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="imagesCount">0</div>
-                        <div>Проверок изображений</div>
-                    </div>
-                </div>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Универсальный фильтр контента</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🛡️ Универсальный фильтр контента</h1>
+                <p>Фильтрация текста и изображений с помощью WebAssembly</p>
             </div>
 
-            <div class="card">
-                <h2>⚡ Настройки фильтрации</h2>
-
-                <div class="form-group">
-                    <label>Чувствительность фильтра изображений:</label>
-                    <input type="range" id="sensitivity" min="0" max="100" value="50">
-                    <span id="sensitivityValue">50%</span>
-                </div>
-
-                <div class="form-group">
-                    <label>Автоматическая блокировка при риске:</label>
-                    <select id="autoBlockThreshold">
-                        <option value="75">Высокий (75%+)</option>
-                        <option value="50" selected>Средний (50%+)</option>
-                        <option value="25">Низкий (25%+)</option>
-                        <option value="0">Отключено</option>
-                    </select>
-                </div>
-
-                <button class="btn btn-success" onclick="saveSettings()">💾 Сохранить настройки</button>
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('admin')">
+                    ⚙️ Админка
+                </button>
+                <button class="tab" onclick="switchTab('text')">
+                    🔤 Фильтр текста
+                </button>
+                <button class="tab" onclick="switchTab('image')">
+                    🖼️ Фильтр изображений
+                </button>
+                <button class="tab" onclick="switchTab('demo')">🎯 Демо</button>
             </div>
-        </div>
 
-        <!-- Фильтр текста -->
-        <div id="text" class="tab-content">
-            <div class="card">
-                <h2>🔤 Проверка текста</h2>
-                <p>Проверьте текст на наличие запрещенных слов</p>
+            <div id="admin" class="tab-content active">
+                <div class="card">
+                    <h2>⚙️ Управление фильтрами</h2>
+                    <p>
+                        Настройте списки запрещенных слов и параметры фильтрации
+                    </p>
 
-                <div class="form-group">
-                    <label>Введите текст для проверки:</label>
-                    <textarea id="textInput" placeholder="Введите ваш текст здесь..."></textarea>
-                </div>
-
-                <button class="btn btn-primary" onclick="checkText()">🔍 Проверить текст</button>
-                <button class="btn btn-success" onclick="checkAndSend()">📤 Проверить и отправить</button>
-                <button class="btn btn-warning" onclick="clearText()">🗑️ Очистить</button>
-
-                <div id="textResult" class="result"></div>
-            </div>
-        </div>
-
-        <!-- Фильтр изображений -->
-        <div id="image" class="tab-content">
-            <div class="card">
-                <h2>🖼️ Проверка изображений</h2>
-                <p>Анализ изображений на предмет NSFW контента</p>
-
-                <div class="upload-area" onclick="document.getElementById('imageInput').click()">
-                    <h3>📁 Перетащите изображение или кликните для выбора</h3>
-                    <p>Поддерживаются форматы: JPG, PNG, GIF</p>
-                    <p><em>⚠️ Функция в разработке</em></p>
-                </div>
-                <input type="file" id="imageInput" accept="image/*" style="display: none;">
-
-                <img id="imagePreview" class="preview" alt="Предпросмотр">
-
-                <div id="imageResult" class="result"></div>
-
-                <div class="stats" id="imageStats" style="display: none;">
-                    <div class="stat-card">
-                        <div class="stat-number" id="nsfwScore">0%</div>
-                        <div>Вероятность NSFW</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="skinTone">0%</div>
-                        <div>Тона кожи</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="saturation">0%</div>
-                        <div>Насыщенность</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Демо -->
-        <div id="demo" class="tab-content">
-            <div class="card">
-                <h2>🎯 Демонстрация работы</h2>
-                <p>Протестируйте работу фильтров на примерах</p>
-
-                <div class="form-group">
-                    <label>Выберите демо-сценарий:</label>
-                    <select id="demoScenario" onchange="loadDemoScenario()">
-                        <option value="">Выберите сценарий...</option>
-                        <option value="clean">✅ Чистый текст</option>
-                        <option value="bad_words">❌ Текст с запрещенными словами</option>
-                        <option value="similar">🔄 Текст с обходом фильтра</option>
-                        <option value="custom">🎨 Пользовательский текст</option>
-                    </select>
-                </div>
-
-                <div id="demoContent" style="display: none;">
                     <div class="form-group">
-                        <label>Демо-текст:</label>
-                        <textarea id="demoText" readonly></textarea>
+                        <label>Запрещенные слова (через запятую):</label>
+                        <textarea
+                            id="badWordsInput"
+                            placeholder="мат, спам, мошенничество, оскорбление..."
+                        ></textarea>
                     </div>
 
-                    <button class="btn btn-primary" onclick="runDemo()">🚀 Запустить проверку</button>
+                    <button class="btn btn-primary" onclick="loadBadWords()">
+                        💾 Загрузить слова
+                    </button>
+                    <button class="btn btn-success" onclick="addDefaultWords()">
+                        📥 Добавить стандартные слова
+                    </button>
+                    <button class="btn btn-danger" onclick="clearBadWords()">
+                        🗑️ Очистить список
+                    </button>
 
-                    <div id="demoResult" class="result"></div>
+                    <div class="form-group">
+                        <label>Добавить отдельное слово:</label>
+                        <div style="display: flex; gap: 10px">
+                            <input
+                                type="text"
+                                id="singleWordInput"
+                                placeholder="Введите слово..."
+                            />
+                            <button
+                                class="btn btn-primary"
+                                onclick="addSingleWord()"
+                            >
+                                ➕ Добавить
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="word-list" id="currentWords">
+                        <em>Загрузка списка слов...</em>
+                    </div>
+
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-number" id="wordsCount">0</div>
+                            <div>Запрещенных слов</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="checksCount">0</div>
+                            <div>Проверок текста</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="imagesCount">0</div>
+                            <div>Проверок изображений</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>⚡ Настройки фильтрации</h2>
+
+                    <div class="form-group">
+                        <label>Чувствительность фильтра изображений:</label>
+                        <input
+                            type="range"
+                            id="sensitivity"
+                            min="0"
+                            max="100"
+                            value="50"
+                        />
+                        <span id="sensitivityValue">50%</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Автоматическая блокировка при риске:</label>
+                        <select id="autoBlockThreshold">
+                            <option value="75">Высокий (75%+)</option>
+                            <option value="50" selected>Средний (50%+)</option>
+                            <option value="25">Низкий (25%+)</option>
+                            <option value="0">Отключено</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-success" onclick="saveSettings()">
+                        💾 Сохранить настройки
+                    </button>
+                </div>
+            </div>
+
+            <div id="text" class="tab-content">
+                <div class="card">
+                    <h2>🔤 Проверка текста</h2>
+                    <p>Проверьте текст на наличие запрещенных слов</p>
+
+                    <div class="form-group">
+                        <label>Введите текст для проверки:</label>
+                        <textarea
+                            id="textInput"
+                            placeholder="Введите ваш текст здесь..."
+                        ></textarea>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="checkText()">
+                        🔍 Проверить текст
+                    </button>
+                    <button class="btn btn-success" onclick="checkAndSend()">
+                        📤 Проверить и отправить
+                    </button>
+                    <button class="btn btn-warning" onclick="clearText()">
+                        🗑️ Очистить
+                    </button>
+
+                    <div id="textResult" class="result"></div>
+                </div>
+            </div>
+
+            <div id="image" class="tab-content">
+                <div class="card">
+                    <h2>🖼️ Проверка изображений</h2>
+                    <p>Анализ изображений на предмет NSFW контента</p>
+
+                    <div
+                        class="upload-area"
+                        onclick="document.getElementById('imageInput').click()"
+                    >
+                        <h3>
+                            📁 Перетащите изображение или кликните для выбора
+                        </h3>
+                        <p>Поддерживаются форматы: JPG, PNG, GIF</p>
+                        <p><em>⚠️ Функция в разработке</em></p>
+                    </div>
+                    <input
+                        type="file"
+                        id="imageInput"
+                        accept="image/*"
+                        style="display: none"
+                    />
+
+                    <img id="imagePreview" class="preview" alt="Предпросмотр" />
+
+                    <div id="imageResult" class="result"></div>
+
+                    <div class="stats" id="imageStats" style="display: none">
+                        <div class="stat-card">
+                            <div class="stat-number" id="nsfwScore">0%</div>
+                            <div>Вероятность NSFW</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="skinTone">0%</div>
+                            <div>Тона кожи</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="saturation">0%</div>
+                            <div>Насыщенность</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="demo" class="tab-content">
+                <div class="card">
+                    <h2>🎯 Демонстрация работы</h2>
+                    <p>Протестируйте работу фильтров на примерах</p>
+
+                    <div class="form-group">
+                        <label>Выберите демо-сценарий:</label>
+                        <select id="demoScenario" onchange="loadDemoScenario()">
+                            <option value="">Выберите сценарий...</option>
+                            <option value="clean">✅ Чистый текст</option>
+                            <option value="bad_words">
+                                ❌ Текст с запрещенными словами
+                            </option>
+                            <option value="similar">
+                                🔄 Текст с обходом фильтра
+                            </option>
+                            <option value="custom">
+                                🎨 Пользовательский текст
+                            </option>
+                        </select>
+                    </div>
+
+                    <div id="demoContent" style="display: none">
+                        <div class="form-group">
+                            <label>Демо-текст:</label>
+                            <textarea id="demoText" readonly></textarea>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="runDemo()">
+                            🚀 Запустить проверку
+                        </button>
+
+                        <div id="demoResult" class="result"></div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Подключаем WASM модуль и наш скрипт -->
-    <script src="text_filter.js"></script>
-    <script src="content_moderator.js"></script>
-    <script src="moderator.js"></script>
-    <script src="app.js"></script>
-</body>
+        <script src="text_filter.js"></script>
+        <script src="content_moderator.js"></script>
+        <script src="moderator.js"></script>
+        <script src="app.js"></script>
+    </body>
 </html>

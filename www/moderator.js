@@ -1,12 +1,9 @@
-// moderator_fixed.js - Упрощенная и надежная версия
 let moderatorInitialized = false;
 
-// Простая и надежная загрузка модуля
 function loadContentModerator() {
   return new Promise((resolve, reject) => {
     console.log("🔄 Загрузка Content Moderator...");
 
-    // Если модуль уже загружен как объект
     if (
       window.ContentModeratorModule &&
       typeof window.ContentModeratorModule.cwrap === "function"
@@ -16,7 +13,6 @@ function loadContentModerator() {
       return;
     }
 
-    // Если есть фабрика
     if (
       window.ContentModeratorModule &&
       typeof window.ContentModeratorModule === "function"
@@ -42,7 +38,6 @@ function loadContentModerator() {
 
       try {
         const instance = window.ContentModeratorModule(moduleConfig);
-        // Если модуль возвращает промис
         if (instance && typeof instance.then === "function") {
           instance.then(resolve).catch(reject);
         }
@@ -52,18 +47,15 @@ function loadContentModerator() {
       return;
     }
 
-    // Загружаем скрипт
     const script = document.createElement("script");
     script.src = "content_moderator.js";
 
     script.onload = function () {
       console.log("✅ Content Moderator script загружен");
 
-      // Даем время на инициализацию
       setTimeout(() => {
         if (window.ContentModeratorModule) {
           if (typeof window.ContentModeratorModule === "function") {
-            // Это фабрика
             const moduleConfig = {
               locateFile: function (path) {
                 if (path.endsWith(".wasm")) {
@@ -88,7 +80,6 @@ function loadContentModerator() {
           } else if (
             typeof window.ContentModeratorModule.cwrap === "function"
           ) {
-            // Это уже инициализированный модуль
             console.log("✅ Content Moderator уже инициализирован");
             resolve(window.ContentModeratorModule);
           } else {
@@ -115,7 +106,6 @@ function loadContentModerator() {
   });
 }
 
-// Инициализация модератора
 async function initModerator() {
   if (moderatorInitialized) {
     console.log("✅ Content Moderator уже инициализирован");
@@ -125,11 +115,9 @@ async function initModerator() {
   try {
     console.log("🔄 Инициализация Content Moderator...");
 
-    // Загружаем модуль
     const moderatorModule = await loadContentModerator();
     console.log("✅ Content Moderator модуль загружен");
 
-    // Создаем обертки для C++ функций
     window.init_moderator = moderatorModule.cwrap("init_moderator", null, []);
     window.analyze_image = moderatorModule.cwrap("analyze_image", "number", [
       "number",
@@ -144,11 +132,9 @@ async function initModerator() {
 
     console.log("✅ Функции C++ обернуты");
 
-    // Инициализируем модератор
     window.init_moderator();
     console.log("✅ init_moderator выполнен");
 
-    // Сохраняем модуль глобально
     window.moderatorModule = moderatorModule;
     moderatorInitialized = true;
 
@@ -159,7 +145,6 @@ async function initModerator() {
   }
 }
 
-// Анализ изображения из ImageData
 function analyzeImageData(imageData, sensitivity = 50) {
   if (!moderatorInitialized || !window.moderatorModule) {
     throw new Error("Moderator not initialized");
@@ -171,7 +156,6 @@ function analyzeImageData(imageData, sensitivity = 50) {
 
   console.log(`🖼️ Анализ изображения: ${width}x${height}`);
 
-  // Выделяем память в WASM
   const buffer = window.moderatorModule._malloc(data.length);
   window.moderatorModule.HEAPU8.set(data, buffer);
 
@@ -192,13 +176,11 @@ function analyzeImageData(imageData, sensitivity = 50) {
     throw error;
   }
 
-  // Освобождаем память
   window.moderatorModule._free(buffer);
 
   return result;
 }
 
-// Анализ файла изображения
 async function analyzeImageFile(file, sensitivity = 50) {
   if (!moderatorInitialized) {
     await initModerator();
@@ -238,7 +220,6 @@ async function analyzeImageFile(file, sensitivity = 50) {
   });
 }
 
-// Получение уровня риска
 function getRiskLevel(probability) {
   if (probability < 20) return "safe";
   if (probability < 50) return "low";
@@ -246,7 +227,6 @@ function getRiskLevel(probability) {
   return "high";
 }
 
-// Экспортируем функции
 window.initModerator = initModerator;
 window.analyzeImageFile = analyzeImageFile;
 window.getRiskLevel = getRiskLevel;

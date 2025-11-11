@@ -1,4 +1,3 @@
-// Глобальные переменные
 var stats = {
   textChecks: 0,
   imageChecks: 0,
@@ -6,14 +5,12 @@ var stats = {
 
 var textFilterInitialized = false;
 
-// Инициализация приложения
 async function initApp() {
   console.log("🚀 Инициализация приложения...");
 
   try {
     showNotification("Загрузка фильтра текста...", "info");
 
-    // Ждем загрузки WASM модуля
     await new Promise((resolve, reject) => {
       const checkModule = () => {
         if (window.Module && window.Module.asm) {
@@ -24,7 +21,6 @@ async function initApp() {
       };
       checkModule();
 
-      // Таймаут на случай ошибки
       setTimeout(() => {
         reject(new Error("WASM модуль не загрузился"));
       }, 15000);
@@ -32,7 +28,6 @@ async function initApp() {
 
     console.log("✅ WASM модуль загружен");
 
-    // Инициализируем функции
     window.init_text_filter = window.Module.cwrap("init_text_filter", null, []);
     window.check_text = window.Module.cwrap("check_text", "number", ["string"]);
     window.add_bad_word = window.Module.cwrap("add_bad_word", null, ["string"]);
@@ -46,11 +41,9 @@ async function initApp() {
       [],
     );
 
-    // Инициализируем фильтр
     window.init_text_filter();
     console.log("✅ Фильтр текста инициализирован");
 
-    // Добавляем базовые слова
     const defaultWords = [
       "мат",
       "спам",
@@ -62,11 +55,9 @@ async function initApp() {
 
     textFilterInitialized = true;
 
-    // Обновляем статистику и список слов
     updateStats();
     updateWordList();
 
-    // Настройка обработчиков событий
     setupEventListeners();
 
     console.log("🎉 Приложение успешно инициализировано!");
@@ -77,9 +68,7 @@ async function initApp() {
   }
 }
 
-// Настройка обработчиков событий
 function setupEventListeners() {
-  // Обработчик загрузки изображений
   const imageInput = document.getElementById("imageInput");
   if (imageInput) {
     imageInput.addEventListener("change", function (e) {
@@ -87,7 +76,6 @@ function setupEventListeners() {
     });
   }
 
-  // Обработчик перетаскивания изображений
   const uploadArea = document.querySelector(".upload-area");
   if (uploadArea) {
     uploadArea.addEventListener("dragover", function (e) {
@@ -112,7 +100,6 @@ function setupEventListeners() {
     });
   }
 
-  // Обработчик чувствительности
   const sensitivity = document.getElementById("sensitivity");
   if (sensitivity) {
     sensitivity.addEventListener("input", function (e) {
@@ -122,7 +109,6 @@ function setupEventListeners() {
   }
 }
 
-// Функции для работы с текстом
 function checkText() {
   try {
     const text = document.getElementById("textInput").value.trim();
@@ -198,7 +184,6 @@ function clearText() {
   if (resultDiv) resultDiv.style.display = "none";
 }
 
-// Функции админки
 function loadBadWords() {
   try {
     const wordsText = document.getElementById("badWordsInput").value.trim();
@@ -305,7 +290,6 @@ function updateWordList() {
   }
 }
 
-// Демо-функции
 function loadDemoScenario() {
   const scenario = document.getElementById("demoScenario").value;
   const demoContent = document.getElementById("demoContent");
@@ -359,8 +343,6 @@ function loadImageDemoScenario() {
 
   if (demoImageContent) demoImageContent.style.display = "block";
   if (demoImageResult) demoImageResult.style.display = "none";
-
-  // Здесь можно добавить превью демо-изображений
 }
 
 async function runImageDemo() {
@@ -379,7 +361,6 @@ async function runImageDemo() {
       resultDiv.innerHTML = "⏳ Запуск демонстрации анализа изображения...";
     }
 
-    // Инициализируем модератор если нужно
     if (!window.moderatorInitialized) {
       await window.initModerator();
     }
@@ -387,24 +368,23 @@ async function runImageDemo() {
     let demoScore;
     let imageDescription = "";
 
-    // Демо-результаты для разных сценариев
     switch (scenario) {
       case "safe_image":
-        demoScore = 15; // Низкий риск
+        demoScore = 15;
         imageDescription = "Пейзаж, природа, архитектура";
         break;
       case "medium_risk":
-        demoScore = 45; // Средний риск
+        demoScore = 45;
         imageDescription =
           "Изображение с элементами кожи и высокой насыщенностью";
         break;
       case "high_risk":
-        demoScore = 85; // Высокий риск
+        demoScore = 85;
         imageDescription =
           "Изображение с большим количеством тонов кожи и высокой насыщенностью";
         break;
       case "random":
-        demoScore = Math.floor(Math.random() * 100); // Случайный результат
+        demoScore = Math.floor(Math.random() * 100);
         imageDescription =
           "Случайно сгенерированный результат для тестирования";
         break;
@@ -504,7 +484,6 @@ function runDemo() {
   }
 }
 
-// Вспомогательные функции
 function switchTab(tabName) {
   document.querySelectorAll(".tab-content").forEach((tab) => {
     tab.classList.remove("active");
@@ -600,7 +579,6 @@ async function handleImageUpload(file) {
   const preview = document.getElementById("imagePreview");
   const resultDiv = document.getElementById("imageResult");
 
-  // Показываем превью
   const url = URL.createObjectURL(file);
   if (preview) {
     preview.src = url;
@@ -614,7 +592,6 @@ async function handleImageUpload(file) {
   }
 
   try {
-    // Простая инициализация модератора
     if (!window.moderatorInitialized) {
       console.log("🔄 Инициализируем модератор...");
       await window.initModerator();
@@ -654,7 +631,6 @@ async function handleImageUpload(file) {
   }
 }
 
-// Экспортируем функции для глобального использования
 window.checkText = checkText;
 window.checkAndSend = checkAndSend;
 window.clearText = clearText;
@@ -669,7 +645,6 @@ window.loadImageDemoScenario = loadImageDemoScenario;
 window.runImageDemo = runImageDemo;
 window.runDemo = runDemo;
 
-// Запускаем при загрузке
 document.addEventListener("DOMContentLoaded", function () {
   console.log("📄 DOM загружен");
   loadSettings();
