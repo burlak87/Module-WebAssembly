@@ -11,7 +11,6 @@ namespace {
 std::vector<std::string> bad_words;
 bool is_initialized = false;
 
-// Функция для приведения строки к нижнему регистру
 std::string to_lower(const std::string& str) {
     std::string result = str;
     std::transform(result.begin(), result.end(), result.begin(),
@@ -19,14 +18,12 @@ std::string to_lower(const std::string& str) {
     return result;
 }
 
-// Разделение текста на слова
 std::vector<std::string> split_words(const std::string& text) {
     std::vector<std::string> words;
     std::stringstream ss(text);
     std::string word;
 
     while (ss >> word) {
-        // Очищаем слово от знаков препинания
         std::string clean_word;
         for (char c : word) {
             if (std::isalnum(static_cast<unsigned char>(c))) {
@@ -40,12 +37,11 @@ std::vector<std::string> split_words(const std::string& text) {
     return words;
 }
 
-} // namespace
+}
 
 void init_text_filter() {
     if (is_initialized) return;
 
-    // Базовый список запрещенных слов
     const char* default_bad_words[] = {
         "мат", "ругательство", "оскорбление", "ненависть",
         "пропаганда", "экстремизм", "насилие", "угроза",
@@ -64,7 +60,6 @@ void add_bad_word(const char* word) {
     if (!word) return;
     std::string word_str = to_lower(word);
 
-    // Проверяем, нет ли уже такого слова
     if (std::find(bad_words.begin(), bad_words.end(), word_str) == bad_words.end()) {
         bad_words.push_back(word_str);
     }
@@ -76,17 +71,15 @@ int check_text(const char* text) {
     std::string text_str(text);
     std::vector<std::string> words = split_words(text_str);
 
-    // Проверяем каждое слово из текста
     for (const std::string& word : words) {
-        // Ищем слово в списке запрещенных
         for (const std::string& bad_word : bad_words) {
             if (word == bad_word) {
-                return 1; // Найдено запрещенное слово
+                return 1;
             }
         }
     }
 
-    return 0; // Текст чистый
+    return 0;
 }
 
 int get_bad_words_count() {
@@ -101,7 +94,6 @@ void load_bad_words(const char* words) {
     std::string word;
 
     while (std::getline(ss, word, ',')) {
-        // Убираем пробелы вокруг слова
         word.erase(0, word.find_first_not_of(" \t\n\r\f\v"));
         word.erase(word.find_last_not_of(" \t\n\r\f\v") + 1);
 
@@ -115,7 +107,6 @@ void clear_bad_words() {
     bad_words.clear();
 }
 
-// Остальные функции можно оставить пустыми для теста
 int check_text_with_detail(const char* text, char* found_word) {
     return 0;
 }

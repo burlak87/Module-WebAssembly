@@ -14,7 +14,6 @@ emcc src/text_filter_simple.cpp \
   -s EXPORTED_RUNTIME_METHODS='["cwrap", "UTF8ToString", "stringToUTF8"]' \
   -o build/text_filter.js
 
-# Копируем файлы
 cp build/text_filter.wasm www/
 cp build/text_filter.js www/
 

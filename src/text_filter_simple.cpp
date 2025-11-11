@@ -10,7 +10,6 @@ namespace {
 std::vector<std::string> bad_words;
 bool is_initialized = false;
 
-// Простая функция для приведения к нижнему регистру
 std::string to_lower(const std::string& str) {
     std::string result = str;
     for (char& c : result) {
@@ -19,12 +18,11 @@ std::string to_lower(const std::string& str) {
     return result;
 }
 
-} // namespace
+}
 
 void init_text_filter() {
     if (is_initialized) return;
 
-    // Базовый список запрещенных слов
     const char* default_bad_words[] = {
         "мат", "спам", "оскорбление", "ненависть"
     };
@@ -40,7 +38,6 @@ void add_bad_word(const char* word) {
     if (!word) return;
     std::string word_str = to_lower(word);
 
-    // Проверяем, нет ли уже такого слова
     if (std::find(bad_words.begin(), bad_words.end(), word_str) == bad_words.end()) {
         bad_words.push_back(word_str);
     }
@@ -51,21 +48,19 @@ int check_text(const char* text) {
 
     std::string text_lower = to_lower(text);
 
-    // Простой поиск подстроки
     for (const std::string& bad_word : bad_words) {
         if (text_lower.find(bad_word) != std::string::npos) {
-            return 1; // Найдено запрещенное слово
+            return 1;
         }
     }
 
-    return 0; // Текст чистый
+    return 0;
 }
 
 int get_bad_words_count() {
     return static_cast<int>(bad_words.size());
 }
 
-// Простые реализации остальных функций
 void load_bad_words(const char* words) {
     if (!words) return;
 
@@ -108,7 +103,6 @@ int check_text_with_detail(const char* text, char* found_word) {
 
     for (const std::string& bad_word : bad_words) {
         if (text_lower.find(bad_word) != std::string::npos) {
-            // Копируем найденное слово в буфер
             std::strncpy(found_word, bad_word.c_str(), 63);
             found_word[63] = '\0';
             return 1;

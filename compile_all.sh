@@ -38,7 +38,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Копируем файлы
 echo "📁 Копирование файлов..."
 cp build/text_filter.wasm www/
 cp build/text_filter.js www/
