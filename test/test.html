@@ -1,11 +1,9 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
+<html lang="ru"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Универсальный фильтр контента</title>
     <link rel="stylesheet" href="styles.css">
-</head>
+<script src="content_moderator.js"></script></head>
 <body>
     <div class="container">
         <div class="header">
@@ -14,14 +12,14 @@
         </div>
 
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('admin')">⚙️ Админка</button>
+            <button class="tab" onclick="switchTab('admin')">⚙️ Админка</button>
             <button class="tab" onclick="switchTab('text')">🔤 Фильтр текста</button>
-            <button class="tab" onclick="switchTab('image')">🖼️ Фильтр изображений</button>
+            <button class="tab active" onclick="switchTab('image')">🖼️ Фильтр изображений</button>
             <button class="tab" onclick="switchTab('demo')">🎯 Демо</button>
         </div>
 
         <!-- Админка -->
-        <div id="admin" class="tab-content active">
+        <div id="admin" class="tab-content">
             <div class="card">
                 <h2>⚙️ Управление фильтрами</h2>
                 <p>Настройте списки запрещенных слов и параметры фильтрации</p>
@@ -43,17 +41,15 @@
                     </div>
                 </div>
 
-                <div class="word-list" id="currentWords">
-                    <em>Загрузка списка слов...</em>
-                </div>
+                <div class="word-list" id="currentWords"><strong>Загружено 15 запрещенных слов</strong></div>
 
                 <div class="stats">
                     <div class="stat-card">
-                        <div class="stat-number" id="wordsCount">0</div>
+                        <div class="stat-number" id="wordsCount">15</div>
                         <div>Запрещенных слов</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number" id="checksCount">0</div>
+                        <div class="stat-number" id="checksCount">8</div>
                         <div>Проверок текста</div>
                     </div>
                     <div class="stat-card">
@@ -69,14 +65,14 @@
                 <div class="form-group">
                     <label>Чувствительность фильтра изображений:</label>
                     <input type="range" id="sensitivity" min="0" max="100" value="50">
-                    <span id="sensitivityValue">50%</span>
+                    <span id="sensitivityValue">80%</span>
                 </div>
 
                 <div class="form-group">
                     <label>Автоматическая блокировка при риске:</label>
                     <select id="autoBlockThreshold">
                         <option value="75">Высокий (75%+)</option>
-                        <option value="50" selected>Средний (50%+)</option>
+                        <option value="50" selected="">Средний (50%+)</option>
                         <option value="25">Низкий (25%+)</option>
                         <option value="0">Отключено</option>
                     </select>
@@ -101,12 +97,12 @@
                 <button class="btn btn-success" onclick="checkAndSend()">📤 Проверить и отправить</button>
                 <button class="btn btn-warning" onclick="clearText()">🗑️ Очистить</button>
 
-                <div id="textResult" class="result"></div>
+                <div id="textResult" class="result success" style="display: none;">✅ Текст прошел проверку! Запрещенных слов не обнаружено.</div>
             </div>
         </div>
 
         <!-- Фильтр изображений -->
-        <div id="image" class="tab-content">
+        <div id="image" class="tab-content active">
             <div class="card">
                 <h2>🖼️ Проверка изображений</h2>
                 <p>Анализ изображений на предмет NSFW контента</p>
@@ -118,9 +114,9 @@
                 </div>
                 <input type="file" id="imageInput" accept="image/*" style="display: none;">
 
-                <img id="imagePreview" class="preview" alt="Предпросмотр">
+                <img id="imagePreview" class="preview" alt="Предпросмотр" src="blob:http://localhost:8000/05725cc6-020b-47e7-b314-64a8f62c602d" style="display: block;">
 
-                <div id="imageResult" class="result"></div>
+                <div id="imageResult" class="result info" style="display: block;">⏳ Анализ изображения...</div>
 
                 <div class="stats" id="imageStats" style="display: none;">
                     <div class="stat-card">
@@ -159,7 +155,7 @@
                 <div id="demoContent" style="display: none;">
                     <div class="form-group">
                         <label>Демо-текст:</label>
-                        <textarea id="demoText" readonly></textarea>
+                        <textarea id="demoText" readonly=""></textarea>
                     </div>
 
                     <button class="btn btn-primary" onclick="runDemo()">🚀 Запустить проверку</button>

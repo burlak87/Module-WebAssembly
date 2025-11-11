@@ -180,6 +180,12 @@ textarea {
     border: 1px solid #bee5eb;
 }
 
+.result.warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
 .word-list {
     max-height: 200px;
     overflow-y: auto;

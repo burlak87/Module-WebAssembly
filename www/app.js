@@ -27,7 +27,7 @@ async function initApp() {
       // Таймаут на случай ошибки
       setTimeout(() => {
         reject(new Error("WASM модуль не загрузился"));
-      }, 5000);
+      }, 15000);
     });
 
     console.log("✅ WASM модуль загружен");
@@ -347,6 +347,106 @@ function loadDemoScenario() {
   }
 }
 
+function loadImageDemoScenario() {
+  const scenario = document.getElementById("imageDemoScenario").value;
+  const demoImageContent = document.getElementById("demoImageContent");
+  const demoImageResult = document.getElementById("demoImageResult");
+
+  if (!scenario) {
+    if (demoImageContent) demoImageContent.style.display = "none";
+    return;
+  }
+
+  if (demoImageContent) demoImageContent.style.display = "block";
+  if (demoImageResult) demoImageResult.style.display = "none";
+
+  // Здесь можно добавить превью демо-изображений
+}
+
+async function runImageDemo() {
+  try {
+    const scenario = document.getElementById("imageDemoScenario").value;
+    const resultDiv = document.getElementById("demoImageResult");
+
+    if (!scenario) {
+      showResult("demoImageResult", "Выберите демо-сценарий", "error");
+      return;
+    }
+
+    if (resultDiv) {
+      resultDiv.style.display = "block";
+      resultDiv.className = "result info";
+      resultDiv.innerHTML = "⏳ Запуск демонстрации анализа изображения...";
+    }
+
+    // Инициализируем модератор если нужно
+    if (!window.moderatorInitialized) {
+      await window.initModerator();
+    }
+
+    let demoScore;
+    let imageDescription = "";
+
+    // Демо-результаты для разных сценариев
+    switch (scenario) {
+      case "safe_image":
+        demoScore = 15; // Низкий риск
+        imageDescription = "Пейзаж, природа, архитектура";
+        break;
+      case "medium_risk":
+        demoScore = 45; // Средний риск
+        imageDescription =
+          "Изображение с элементами кожи и высокой насыщенностью";
+        break;
+      case "high_risk":
+        demoScore = 85; // Высокий риск
+        imageDescription =
+          "Изображение с большим количеством тонов кожи и высокой насыщенностью";
+        break;
+      case "random":
+        demoScore = Math.floor(Math.random() * 100); // Случайный результат
+        imageDescription =
+          "Случайно сгенерированный результат для тестирования";
+        break;
+      default:
+        demoScore = 0;
+    }
+
+    let message = `<strong>Результаты демонстрации анализа изображения:</strong><br><br>`;
+    message += `<strong>Сценарий:</strong> ${document.getElementById("imageDemoScenario").options[document.getElementById("imageDemoScenario").selectedIndex].text}<br>`;
+    message += `<strong>Описание:</strong> ${imageDescription}<br><br>`;
+    message += `<strong>Результат анализа:</strong><br>`;
+    message += `Вероятность NSFW: <strong>${demoScore}%</strong><br>`;
+    message += `Уровень риска: <strong>${window.getRiskLevel(demoScore)}</strong><br><br>`;
+
+    if (demoScore > 75) {
+      message += `<span style="color: var(--danger)">❌ Высокий риск! Контент может быть неприемлемым.</span>`;
+      if (resultDiv) resultDiv.className = "result error";
+    } else if (demoScore > 50) {
+      message += `<span style="color: var(--warning)">⚠️ Средний риск. Рекомендуется проверка модератора.</span>`;
+      if (resultDiv) resultDiv.className = "result warning";
+    } else {
+      message += `<span style="color: var(--success)">✅ Низкий риск. Контент безопасен.</span>`;
+      if (resultDiv) resultDiv.className = "result success";
+    }
+
+    message += `<br><br><strong>Статистика:</strong> Проверено ${stats.imageChecks} изображений`;
+
+    if (resultDiv) {
+      resultDiv.innerHTML = message;
+    }
+
+    stats.imageChecks++;
+    updateStats();
+  } catch (error) {
+    const resultDiv = document.getElementById("demoImageResult");
+    if (resultDiv) {
+      resultDiv.className = "result error";
+      resultDiv.innerHTML = `❌ Ошибка при выполнении демо: ${error.message}`;
+    }
+  }
+}
+
 function runDemo() {
   try {
     const scenario = document.getElementById("demoScenario").value;
@@ -494,7 +594,6 @@ function saveSettings() {
   showNotification("Настройки сохранены", "success");
 }
 
-// Заглушка для функций изображений
 async function handleImageUpload(file) {
   if (!file) return;
 
@@ -511,12 +610,48 @@ async function handleImageUpload(file) {
   if (resultDiv) {
     resultDiv.style.display = "block";
     resultDiv.className = "result info";
-    resultDiv.innerHTML =
-      "⏳ Анализ изображений временно недоступен<br><em>Функция находится в разработке</em>";
+    resultDiv.innerHTML = "⏳ Анализ изображения...";
   }
 
-  stats.imageChecks++;
-  updateStats();
+  try {
+    // Простая инициализация модератора
+    if (!window.moderatorInitialized) {
+      console.log("🔄 Инициализируем модератор...");
+      await window.initModerator();
+    }
+
+    const sensitivity =
+      parseInt(document.getElementById("sensitivity").value) || 50;
+    console.log(`🔧 Чувствительность: ${sensitivity}`);
+
+    const nsfwScore = await window.analyzeImageFile(file, sensitivity);
+
+    stats.imageChecks++;
+    updateStats();
+
+    const scorePercent = nsfwScore + "%";
+    let message = `<strong>Результат анализа:</strong><br>`;
+    message += `Вероятность NSFW: <strong>${scorePercent}</strong><br>`;
+
+    if (nsfwScore > 75) {
+      message += `<span style="color: var(--danger)">❌ Высокий риск!</span>`;
+      resultDiv.className = "result error";
+    } else if (nsfwScore > 50) {
+      message += `<span style="color: var(--warning)">⚠️ Средний риск.</span>`;
+      resultDiv.className = "result warning";
+    } else {
+      message += `<span style="color: var(--success)">✅ Низкий риск.</span>`;
+      resultDiv.className = "result success";
+    }
+
+    resultDiv.innerHTML = message;
+  } catch (error) {
+    console.error("❌ Ошибка анализа изображения:", error);
+    if (resultDiv) {
+      resultDiv.className = "result error";
+      resultDiv.innerHTML = `❌ Ошибка анализа: ${error.message}`;
+    }
+  }
 }
 
 // Экспортируем функции для глобального использования
@@ -530,6 +665,8 @@ window.clearBadWords = clearBadWords;
 window.addSingleWord = addSingleWord;
 window.saveSettings = saveSettings;
 window.loadDemoScenario = loadDemoScenario;
+window.loadImageDemoScenario = loadImageDemoScenario;
+window.runImageDemo = runImageDemo;
 window.runDemo = runDemo;
 
 // Запускаем при загрузке
